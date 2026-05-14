@@ -1,0 +1,54 @@
+name: ai-soar
+
+services:
+  # 1. Local LLM (Ollama)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai_soar_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - soar_network
+    # หากเครื่องของคุณมีการ์ดจอ NVIDIA ให้เอาคอมเมนต์ด้านล่างออกเพื่อใช้ GPU ช่วยรัน AI ให้เร็วขึ้น
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # 2. n8n (Automation & Workflow)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ai_soar_n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/ # เปลี่ยนเป็น IP จริงหากนำไปใช้งานบน Production
+      - GENERIC_TIMEZONE=Asia/Bangkok
+      # อนุญาตให้ n8n ยิง HTTP Request เข้า Private Network / Localhost (Wazuh, Ollama)
+      - N8N_BANNED_INCIDENT_RESPONSES=
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    networks:
+      - soar_network
+    depends_on:
+      - ollama
+
+networks:
+  soar_network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  n8n_data:

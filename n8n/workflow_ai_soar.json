@@ -1,0 +1,299 @@
+{
+  "name": "AI-SOAR Automated Response (Wazuh + Llama 3.2 + Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wazuh-webhook",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Receive Wazuh Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [ 0, 0 ],
+      "id": "e9e623eb-69b5-41d3-a4c0-7cf1651ba5f2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"llama3.2\", \"prompt\": \"Analyze the following Wazuh security alert and determine if it is a True Positive or False Positive. Return a JSON object with keys: 'is_false_positive' (boolean), 'summary' (string), 'recommended_action' (string), and 'confidence' (number).\\n\\nAlert Details: \" + JSON.stringify($json.body) + \"\\n\\nJSON Output ONLY:\", \"stream\": false, \"format\": \"json\" }",
+        "options": {}
+      },
+      "name": "Local LLM (Llama 3.2)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 220, 0 ],
+      "id": "9742afc8-c990-4e31-8da1-b2dae9da4edb"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "analysis",
+              "value": "={{ JSON.parse($json.response) }}"
+            },
+            {
+              "name": "original_alert",
+              "value": "={{ $('Receive Wazuh Alert').item.json.body }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Format Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [ 440, 0 ],
+      "id": "1bc9dcaf-99d9-482f-87a3-e7f0931fc80e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.analysis.is_false_positive }}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "name": "Filter False Positives",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [ 660, 0 ],
+      "id": "bb0b0e51-4148-4e0d-b4ea-1fcfafb48192"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "={{ '🚨 *Security Alert Analysis*\\n\\n*Summary:* ' + $json.analysis.summary + '\\n*Confidence:* ' + $json.analysis.confidence + '%\\n*Recommendation:* ' + $json.analysis.recommended_action + '\\n\\nDo you want to block this IP?' }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "🚨 Block IP",
+                    "callbackData": "block_ip"
+                  },
+                  {
+                    "text": "✅ Ignore",
+                    "callbackData": "ignore"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Telegram (Human-in-the-loop)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [ 900, -100 ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram account"
+        }
+      },
+      "id": "ca1d9230-f94d-4581-9b6d-a19b22ea891b"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "name": "Telegram Callback",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [ 0, 300 ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram account"
+        }
+      },
+      "webhookId": "telegram-callback-1",
+      "id": "fcdb8a4c-8bb1-4cf1-8c46-ea9f9e3cf445"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.callbackQuery.data }}",
+              "value2": "block_ip"
+            }
+          ]
+        }
+      },
+      "name": "Check Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [ 220, 300 ],
+      "id": "50e060c4-a15e-4bb5-a3aa-b9da6f2d2b51"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://wazuh-manager:55000/security/user/authenticate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "name": "Get Wazuh Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 460, 200 ],
+      "id": "get-wazuh-token-node"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://wazuh-manager:55000/active-response",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $json.data.token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"command\": \"firewall-drop\", \"arguments\": [ \"--\", \"<source_ip>\" ], \"custom\": true }",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "name": "Execute Block IP (Wazuh AR)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [ 680, 200 ],
+      "id": "ddb05f24-2c26-4447-aa2d-ed6f38efde73"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callbackQuery.message.chat.id }}",
+        "text": "🛡️ The IP has been successfully blocked by Wazuh Active Response.",
+        "additionalFields": {}
+      },
+      "name": "Notify Success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [ 900, 200 ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram account"
+        }
+      },
+      "id": "e2f69429-28c0-4352-be53-f72be042da18"
+    }
+  ],
+  "connections": {
+    "Receive Wazuh Alert": {
+      "main": [
+        [
+          {
+            "node": "Local LLM (Llama 3.2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local LLM (Llama 3.2)": {
+      "main": [
+        [
+          {
+            "node": "Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data": {
+      "main": [
+        [
+          {
+            "node": "Filter False Positives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter False Positives": {
+      "main": [
+        [
+          {
+            "node": "Telegram (Human-in-the-loop)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Callback": {
+      "main": [
+        [
+          {
+            "node": "Check Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Action": {
+      "main": [
+        [
+          {
+            "node": "Get Wazuh Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Wazuh Token": {
+      "main": [
+        [
+          {
+            "node": "Execute Block IP (Wazuh AR)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Block IP (Wazuh AR)": {
+      "main": [
+        [
+          {
+            "node": "Notify Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
