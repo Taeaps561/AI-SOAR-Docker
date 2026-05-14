@@ -35,7 +35,7 @@
 Analysts interact with the system through a purpose-built **Telegram Bot UI**, complete with rich formatting, one-click response actions, and raw log inspection. High-confidence threats are escalated automatically.
 
 > 🔗 Demo on YouTube: *(link coming soon)*
-> 📦 Open-source | `the-ai-soar-analyst`
+> 📦 Open-source | `AI-SOAR-Docker`
 
 <img width="800" alt="AI-SOAR Analyst – System Overview" src="assets/architecture_v2.png" />
 
@@ -45,8 +45,8 @@ Analysts interact with the system through a purpose-built **Telegram Bot UI**, c
 
 | Feature | Description |
 |---|---|
-| 🔴 Real-time Monitoring | Continuously polls Wazuh Indexer for high-severity security events |
-| 🤖 Local AI Analysis | Uses Llama 3.2 (3B) via native Ollama SDK — fully offline, fully private |
+| 🔴 Real-time Monitoring | Receives real-time Webhooks from Wazuh for high-severity security events |
+| 🤖 Local AI Analysis | Uses Llama 3.2 (3B) via n8n Ollama Node — fully offline, fully private |
 | 📲 Telegram SOAR UI | Richly formatted alerts with hashtags, monospaced text, and interactive buttons |
 | 🛡️ Acknowledge Alert | Instantly mark alerts as seen and update the audit trail |
 | 🚫 Block IP | Trigger Wazuh Active Response to ban malicious source IPs |
@@ -63,7 +63,7 @@ The system operates on a containerized microservices architecture designed for c
 ```text
                  ┌─────────────────────────────────────────────┐
                  │              Wazuh Deployment                │
-                 │   Manager :55000        Indexer :9200        │
+                 │   Manager (API: 55000)                       │
                  └──────────────┬──────────────────────────────┘
                                 │ Alerts (Webhook)
                                 ▼
