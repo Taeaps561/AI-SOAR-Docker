@@ -37,7 +37,7 @@ Analysts interact with the system through a purpose-built **Telegram Bot UI**, c
 > 🔗 Demo on YouTube: *(link coming soon)*
 > 📦 Open-source | `the-ai-soar-analyst`
 
-<img width="800" alt="AI-SOAR Analyst – System Overview" src="assets/architecture.png" />
+<img width="800" alt="AI-SOAR Analyst – System Overview" src="assets/architecture_v2.png" />
 
 ---
 
