@@ -1,6 +1,6 @@
 <!-- cSpell:disable -->
 <!-- markdownlint-disable -->
-# 🛡️ SOAR with n8n + Local LLM + Wazuh
+# 🛡️ SOAR with Wazuh + n8n + Local LLM
 
 > ⚡ Enterprise-grade Security Orchestration, Automation, and Response — powered by Local LLMs, built for real SOC workflows.
 
@@ -30,12 +30,14 @@
 
 ## Overview
 
-**SOAR with n8n + Local LLM + Wazuh** is a fully automated, local-first Security Orchestration, Automation, and Response (SOAR) platform. It connects directly to a live **Wazuh** deployment, continuously monitors high-severity alerts, and uses a **locally-hosted LLM (Llama 3.2 via Ollama)** to perform real-time threat analysis — all without sending sensitive data to external services.
+**SOAR with Wazuh + n8n + Local LLM** is a fully automated, local-first Security Orchestration, Automation, and Response (SOAR) platform. It connects directly to a live **Wazuh** deployment, continuously monitors high-severity alerts, and uses a **locally-hosted LLM (Llama 3.2 via Ollama)** to perform real-time threat analysis — all without sending sensitive data to external services.
 
 Analysts interact with the system through a purpose-built **Telegram Bot UI**, complete with rich formatting, one-click response actions, and raw log inspection. High-confidence threats are escalated automatically.
 
 > 🔗 Demo on YouTube: *(link coming soon)*
-> 📦 Open-source | `soar-n8n-local-llm-wazuh`
+> 📦 Open-source | `the-ai-soar-analyst`
+
+<img width="800" alt="AI-SOAR Analyst – System Overview" src="assets/architecture_v2.png" />
 
 ---
 
@@ -200,7 +202,7 @@ AI-SOAR-Docker/
 
 ## License
 
-MIT License. Created for SOC Analysts by **The SOAR Team**.
+MIT License. Created for SOC Analysts by **The AI-SOAR Team**.
 
 ---
 
